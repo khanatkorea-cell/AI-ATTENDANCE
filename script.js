@@ -1,15 +1,17 @@
-// ✅ AI Attendance Script (Connected to Google Sheet)
+// Updated client script — paste into your GitHub repo (script.js)
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxYwLjV9fbDFb7BtAK89zReV4Lm-rZ1yt1InpbhFpymSqlOWGR2-YAjaCdTFSvPm4Qk/exec";
 
-// Access camera
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const statusText = document.getElementById("status");
 
-// Start camera stream
-navigator.mediaDevices.getUserMedia({ video: true })
-  .then(stream => video.srcObject = stream)
-  .catch(err => alert("Camera access denied or not available."));
+// start camera
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+  .then(stream => { video.srcObject = stream; })
+  .catch(err => {
+    alert("Camera access denied or not available. Error: " + err);
+    console.error(err);
+  });
 
 document.getElementById("captureBtn").addEventListener("click", async () => {
   const name = document.getElementById("name").value.trim();
@@ -17,40 +19,56 @@ document.getElementById("captureBtn").addEventListener("click", async () => {
   const className = document.getElementById("className").value.trim();
 
   if (!name || !roll || !className) {
-    alert("Please fill in all fields before marking attendance.");
+    alert("Please fill in Name, Roll and Class.");
     return;
   }
 
-  // Capture photo
-  const context = canvas.getContext("2d");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const imageData = canvas.toDataURL("image/png");
+  // Resize to reduce payload (helps avoid "payload too large")
+  const desiredWidth = 640; // smaller = smaller upload
+  const vw = video.videoWidth || 640;
+  const vh = video.videoHeight || 480;
+  const scale = desiredWidth / vw;
+  canvas.width = desiredWidth;
+  canvas.height = Math.round(vh * scale);
 
-  statusText.textContent = "⏳ Saving attendance...";
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  // Send to Google Apps Script
+  // Use JPEG with quality to reduce size
+  const imageData = canvas.toDataURL("image/jpeg", 0.6);
+
+  statusText.textContent = "⏳ Sending attendance...";
+
+  const payload = {
+    name: name,
+    roll: roll,
+    className: className,
+    image: imageData
+  };
+
   try {
+    // NOTE: do NOT set Content-Type header (avoids triggering a CORS preflight)
     const response = await fetch(WEB_APP_URL, {
       method: "POST",
-      body: JSON.stringify({
-        name: name,
-        roll: roll,
-        className: className,
-        image: imageData
-      }),
-      headers: {
-        "Content-Type": "application/json"
-      }
+      body: JSON.stringify(payload)
+      // no headers
     });
 
-    const result = await response.text();
-    statusText.textContent = "✅ Attendance saved successfully!";
-    console.log(result);
-  } catch (error) {
-    console.error(error);
-    statusText.textContent = "❌ Error saving attendance. Please try again.";
+    // response may be opaque if CORS issues exist; try to read text
+    let text = "No readable response (possible CORS response).";
+    try { text = await response.text(); } catch (err) { /* ignore */ }
+
+    console.log("Server reply:", response, text);
+
+    // If response.ok is true, treat as saved; if opaque or unknown, still give success message but check sheet
+    if (response && (response.ok || response.type === "opaque" || response.status === 0)) {
+      statusText.textContent = "✅ Attendance sent — check Google Sheet (refresh).";
+    } else {
+      statusText.textContent = "❌ Something went wrong. See console and Apps Script logs.";
+    }
+  } catch (err) {
+    console.error("Fetch error:", err);
+    statusText.textContent = "❌ Network error: " + err.message;
   }
 
   // Clear fields
