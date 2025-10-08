@@ -1,58 +1,29 @@
-const video = document.getElementById('camera');
-const canvas = document.getElementById('snapshot');
-const markBtn = document.getElementById('markBtn');
-const status = document.getElementById('status');
+const FOLDER_ID = "1EKAc1k0cj0vV2pwYsBNWB2OZlu9JMiGi"; // Your folder ID
 
-// Start webcam
-navigator.mediaDevices.getUserMedia({ video: true })
-  .then(stream => {
-    video.srcObject = stream;
-  })
-  .catch(err => {
-    alert("Camera access denied or not available.");
-  });
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+  var data = JSON.parse(e.postData.contents);
 
-// Google Script Web App URL
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz5GswCmLUI-lgIv6GjQcTHB2yE9INA5__cF971ZPCsvH_KZ1FoXHnUTXOSRvN2VyTg/exec";
+  var date = Utilities.formatDate(new Date(), "Asia/Karachi", "dd-MM-yyyy");
+  var time = Utilities.formatDate(new Date(), "Asia/Karachi", "HH:mm:ss");
 
-markBtn.addEventListener('click', async () => {
-  const name = document.getElementById('studentName').value.trim();
-  const roll = document.getElementById('rollNumber').value.trim();
-  const className = document.getElementById('className').value.trim();
+  // Decode image
+  var imgData = data.image.replace(/^data:image\/png;base64,/, "");
+  var blob = Utilities.base64Decode(imgData);
+  var file = DriveApp.getFolderById(FOLDER_ID)
+              .createFile(Utilities.newBlob(blob, "image/png", data.name + "_" + time + ".png"));
 
-  if (!name || !roll || !className) {
-    alert("Please fill in all fields!");
-    return;
-  }
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  var imageURL = "https://drive.google.com/uc?export=view&id=" + file.getId();
 
-  // Capture photo
-  const context = canvas.getContext('2d');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const imageData = canvas.toDataURL('image/png');
+  sheet.appendRow([
+    data.name,
+    data.roll,
+    data.className,
+    date,
+    time,
+    `=IMAGE("${imageURL}")`
+  ]);
 
-  // Prepare data
-  const data = {
-    name: name,
-    roll: roll,
-    className: className,
-    image: imageData
-  };
-
-  status.innerText = "Saving attendance...";
-
-  try {
-    const response = await fetch(WEB_APP_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
-
-    status.innerText = `✅ Attendance saved for ${name}`;
-  } catch (error) {
-    status.innerText = "❌ Error saving attendance!";
-    console.error(error);
-  }
-});
+  return ContentService.createTextOutput("Saved").setMimeType(ContentService.MimeType.TEXT);
+}
