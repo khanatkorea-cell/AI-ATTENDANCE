@@ -1,34 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Attendance System</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 360px;
+    }
+    select, input, button {
+      margin: 10px 0;
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    video, canvas {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .status {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <h1>📚 AI Attendance System</h1>
-
-  <div class="form-container">
-    <label>Name:</label>
-    <input type="text" id="name" placeholder="Enter student name" required>
-
-    <label>Roll Number:</label>
-    <input type="text" id="roll" placeholder="Enter roll number" required>
-
-    <label>Class:</label>
-    <input type="text" id="className" placeholder="Enter class" required>
-
-    <button id="captureBtn">📸 Mark Attendance</button>
-  </div>
-
-  <div class="camera">
-    <video id="video" autoplay></video>
-    <canvas id="canvas" style="display:none;"></canvas>
-  </div>
-
-  <p id="status"></p>
-
-  <script src="script.js"></script>
-</body>
-</html>
+  <
